@@ -94,6 +94,11 @@ $resultado = mysqli_query($conexao, $sql);
       color: var(--light-color);
     }
     
+    .btn-identificar {
+      background-color: #28a745;
+      color: var(--light-color);
+    }
+    
     .empty-message {
       padding: 20px;
       text-align: center;
@@ -179,6 +184,9 @@ $resultado = mysqli_query($conexao, $sql);
                     <?php endif; ?>
                   </td>
                   <td>
+                    <?php if ($corpo['status'] != 'Identificado'): ?>
+                      <a href="identificar.php?id=<?php echo $corpo['id_morto']; ?>" class="btn-acao btn-identificar">Identificar</a>
+                    <?php endif; ?>
                     <a href="saida.php?id=<?php echo $corpo['id_morto']; ?>" class="btn-acao btn-liberar">Liberar</a>
                   </td>
                 </tr>
