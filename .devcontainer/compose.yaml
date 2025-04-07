@@ -1,0 +1,37 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    ports:
+      - "3000:80"
+    volumes:
+      - ../:/var/www/html
+    environment:
+      MYSQL_HOST: db
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: necroterio
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+    
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: necroterio
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+    ports:
+      - "3306:3306"
+    volumes:
+      - ../necroterio.sql:/docker-entrypoint-initdb.d/necroterio.sql
+  
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "8080:80"
+    depends_on:
+      - db

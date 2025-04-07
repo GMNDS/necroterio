@@ -1,0 +1,8 @@
+{
+    "name": "Lamp (PHP, MySQL, phpMyAdmin)",
+    "dockerComposeFile": "compose.yaml",
+    "service": "app",
+    "workspaceFolder": "/var/www/html",
+    // "forwardPorts": [3000, 80, 3306, 8080],
+    "shutdownAction": "stopCompose"
+}

@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap');
+
+:root {
+  --primary-color: #2c3e50;
+  --secondary-color: #34495e;
+  --accent-color: #7f8c8d;
+  --light-color: #ffffff;
+  --hover-color: #f0f0f0;
+  --card-bg: #f9f9f9;
+  --btn-color: #93a0bb;
+  --btn-hover: #bfcbe4;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, html {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  font-family: "Cinzel", serif;
+  background-color: #f4f6f8;
+}
+
+/* sidebar */
+.sidebar {
+  width: 300px;
+  background: var(--light-color);
+  padding: 20px;
+  height: 100vh;
+  border-radius: 20px;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h2 {
+  color: var(--primary-color);
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+}
+
+.sidebar nav ul li {
+  list-style: none;
+  padding-block: 8px;
+}
+
+.sidebar ul li a {
+  text-decoration: none;
+  color: var(--secondary-color);
+  font-weight: 600;
+  padding: 10px;
+  border-radius: 12px;
+  display: block;
+  transition: background-color 0.3s ease;
+}
+
+.sidebar ul li a:hover {
+  background-color: var(--hover-color);
+}
+
+/* main */
+.main {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  gap: 20px;
+  width: 100%;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.card-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+  background: var(--card-bg);
+  width: 100%;
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+}
+
+.card h2 {
+  color: var(--primary-color);
+}
+
+.card h3 {
+  color: var(--btn-color);
+  font-size: 2rem;
+}
+
+.card a {
+  color: var(--secondary-color);
+  text-decoration: none;
+  font-weight: bold;
+  margin-top: 8px;
+  display: inline-block;
+}
+
+.btn {
+  background: var(--btn-color);
+  color: #fff;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 10px;
+  font-size: 1.1rem;
+  text-align: center;
+  transition: background 0.3s ease;
+}
+
+.btn:hover {
+  background: var(--btn-hover);
+}
