@@ -1,4 +1,5 @@
 <?php
+require_once 'verificar_sessao.php';
 require_once 'conexao.php';
 
 // Buscar histórico de saídas
@@ -82,6 +83,19 @@ $resultado = mysqli_query($conexao, $sql);
       color: var(--primary-color);
       font-weight: 600;
     }
+    
+    .user-info {
+      padding: 10px;
+      margin-top: 20px;
+      border-top: 1px solid #eee;
+      color: var(--accent-color);
+      font-size: 0.9rem;
+    }
+    
+    .user-info span {
+      font-weight: 600;
+      color: var(--primary-color);
+    }
   </style>
 </head>
 <body>
@@ -94,8 +108,17 @@ $resultado = mysqli_query($conexao, $sql);
         <li> <a href="saida.php">Saída de corpos</a></li>
         <li> <a href="lista_corpos.php">Lista de corpos</a></li>
         <li> <a href="historico.php">Histórico de saídas</a></li>
+        <?php if ($_SESSION['nivel_usuario'] == 'admin'): ?>
+        <li> <a href="usuarios.php">Gerenciar Usuários</a></li>
+        <?php endif; ?>
+        <li> <a href="logout.php">Sair do Sistema</a></li>
       </ul>
     </nav>
+    <div class="user-info">
+      Usuário: <span><?php echo htmlspecialchars($_SESSION['nome_usuario']); ?></span>
+      <br>
+      Nível: <span><?php echo $_SESSION['nivel_usuario'] == 'admin' ? 'Administrador' : 'Funcionário'; ?></span>
+    </div>
   </header>
   <main class="main">
     <section>

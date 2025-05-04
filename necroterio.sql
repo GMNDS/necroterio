@@ -26,6 +26,32 @@ USE `necroterio`;
 -- --------------------------------------------------------
 
 --
+-- Estrutura da tabela `tb_usuarios`
+--
+
+DROP TABLE IF EXISTS `tb_usuarios`;
+CREATE TABLE `tb_usuarios` (
+  `id_usuario` int(11) NOT NULL AUTO_INCREMENT,
+  `nome` varchar(100) NOT NULL,
+  `login` varchar(50) NOT NULL,
+  `senha` varchar(255) NOT NULL,
+  `nivel` enum('admin','funcionario') NOT NULL DEFAULT 'funcionario',
+  `email` varchar(100) DEFAULT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `data_cadastro` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_usuario`),
+  UNIQUE KEY `idx_login` (`login`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dados iniciais para tabela `tb_usuarios`
+--
+INSERT INTO `tb_usuarios` (`nome`, `login`, `senha`, `nivel`, `email`, `ativo`) VALUES
+('Administrador', 'admin', '$2y$12$x0/wCjNH21NkzF7oPM9kR.GtnFp6gmoNNTFThoS8PMM1av2..wOcu', 'admin', 'admin@exemplo.com', 1);
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura da tabela `tb_camara`
 --
 

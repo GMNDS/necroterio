@@ -1,16 +1,15 @@
 <?php
+require_once 'verificar_sessao.php';
 require_once 'conexao.php';
 
 $mensagem = '';
 
-// Buscar corpos ativos (sem registro de saída)
 $sql_corpos = "SELECT r.id_morto, r.nome, r.identificacao 
                FROM tb_recepcao r 
                LEFT JOIN tb_saida s ON r.id_morto = s.id_morto
                WHERE s.id_morto IS NULL";
 $resultado_corpos = mysqli_query($conexao, $sql_corpos);
 
-// Processar o formulário de saída
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $id_morto = $_POST['id_morto'];
     $data_saida = $_POST['data_saida'];
@@ -19,7 +18,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $documento_autorizacao = mysqli_real_escape_string($conexao, $_POST['documento_autorizacao'] ?? '');
     $observacao = mysqli_real_escape_string($conexao, $_POST['observacao'] ?? '');
 
-    // Inserir na tabela tb_saida usando prepared statement
     $sql = "INSERT INTO tb_saida (id_morto, data_saida, destino, responsavel_liberacao, documento_autorizacao, observacao) 
             VALUES (?, ?, ?, ?, ?, ?)";
     
@@ -28,9 +26,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                           $documento_autorizacao, $observacao);
     
     if (mysqli_stmt_execute($stmt)) {
-        // Registrar no histórico
         $descricao = "Saída registrada para: " . $destino;
-        $usuario = "Sistema"; 
+        $usuario = $_SESSION['nome_usuario']; 
         
         $sql_historico = "INSERT INTO tb_historico (id_morto, descricao, usuario) VALUES (?, ?, ?)";
         $stmt_hist = mysqli_prepare($conexao, $sql_historico);
@@ -43,7 +40,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-// Verificar se há um ID na URL para pré-selecionar
 $id_pre_selecionado = isset($_GET['id']) ? intval($_GET['id']) : 0;
 ?>
 <!DOCTYPE html>
@@ -129,6 +125,19 @@ $id_pre_selecionado = isset($_GET['id']) ? intval($_GET['id']) : 0;
         flex-direction: column;
       }
     }
+    
+    .user-info {
+      padding: 10px;
+      margin-top: 20px;
+      border-top: 1px solid #eee;
+      color: var(--accent-color);
+      font-size: 0.9rem;
+    }
+    
+    .user-info span {
+      font-weight: 600;
+      color: var(--primary-color);
+    }
   </style>
 </head>
 <body>
@@ -141,8 +150,17 @@ $id_pre_selecionado = isset($_GET['id']) ? intval($_GET['id']) : 0;
         <li> <a href="saida.php">Saída de corpos</a></li>
         <li> <a href="lista_corpos.php">Lista de corpos</a></li>
         <li> <a href="historico.php">Histórico de saídas</a></li>
+        <?php if ($_SESSION['nivel_usuario'] == 'admin'): ?>
+        <li> <a href="usuarios.php">Gerenciar Usuários</a></li>
+        <?php endif; ?>
+        <li> <a href="logout.php">Sair do Sistema</a></li>
       </ul>
     </nav>
+    <div class="user-info">
+      Usuário: <span><?php echo htmlspecialchars($_SESSION['nome_usuario']); ?></span>
+      <br>
+      Nível: <span><?php echo $_SESSION['nivel_usuario'] == 'admin' ? 'Administrador' : 'Funcionário'; ?></span>
+    </div>
   </header>
   <main class="main">
     <section>
@@ -186,7 +204,7 @@ $id_pre_selecionado = isset($_GET['id']) ? intval($_GET['id']) : 0;
           <div class="form-row">
             <div class="form-group">
               <label for="responsavel_liberacao">Responsável pela Liberação:</label>
-              <input type="text" id="responsavel_liberacao" name="responsavel_liberacao" required>
+              <input type="text" id="responsavel_liberacao" name="responsavel_liberacao" value="<?php echo htmlspecialchars($_SESSION['nome_usuario']); ?>" required>
             </div>
             
             <div class="form-group">

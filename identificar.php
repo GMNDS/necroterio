@@ -1,4 +1,5 @@
 <?php
+require_once 'verificar_sessao.php';
 require_once 'conexao.php';
 
 $mensagem = '';
@@ -37,40 +38,59 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $observacao = mysqli_real_escape_string($conexao, $_POST['observacao']);
     $responsavel = mysqli_real_escape_string($conexao, $_POST['responsavel']);
 
-    // Atualizar dados na tabela tb_recepcao
-    $sql = "UPDATE tb_recepcao SET 
-            nome = ?, 
-            identificacao = ?, 
-            sexo = ?, 
-            idade_aproximada = ?, 
-            status = ?, 
-            observacao = CONCAT(observacao, '\n[Atualização de Identificação]: ', ?)
-            WHERE id_morto = ?";
-    
-    $stmt = mysqli_prepare($conexao, $sql);
-    mysqli_stmt_bind_param($stmt, 'sssissi', 
-        $nome, $identificacao, $sexo, $idade_aproximada, $status, $observacao, $id_morto);
-    
-    if (mysqli_stmt_execute($stmt)) {
-        // Registrar no histórico
-        $descricao = "Identificação atualizada por $responsavel. Nome: $nome, Documento: $identificacao";
-        $usuario = $responsavel;
+    // Verificar se o CPF já existe no banco de dados (se foi fornecido) e não pertence a este corpo
+    $cpf_duplicado = false;
+    if (!empty($identificacao)) {
+        $sql_verificar_cpf = "SELECT COUNT(*) as total FROM tb_recepcao WHERE identificacao = ? AND id_morto != ?";
+        $stmt_verificar = mysqli_prepare($conexao, $sql_verificar_cpf);
+        mysqli_stmt_bind_param($stmt_verificar, 'si', $identificacao, $id_morto);
+        mysqli_stmt_execute($stmt_verificar);
+        $resultado_verificacao = mysqli_stmt_get_result($stmt_verificar);
+        $dados_verificacao = mysqli_fetch_assoc($resultado_verificacao);
         
-        $sql_historico = "INSERT INTO tb_historico (id_morto, descricao, usuario) VALUES (?, ?, ?)";
-        $stmt_hist = mysqli_prepare($conexao, $sql_historico);
-        mysqli_stmt_bind_param($stmt_hist, 'iss', $id_morto, $descricao, $usuario);
-        mysqli_stmt_execute($stmt_hist);
+        if ($dados_verificacao['total'] > 0) {
+            $cpf_duplicado = true;
+            $mensagem = '<div class="alerta erro">Este CPF já está cadastrado para outro corpo no sistema. Não é possível usar o mesmo CPF duas vezes.</div>';
+        }
+    }
+
+    // Só prossegue com a atualização se não for um CPF duplicado
+    if (!$cpf_duplicado) {
+        // Atualizar dados na tabela tb_recepcao
+        $sql = "UPDATE tb_recepcao SET 
+                nome = ?, 
+                identificacao = ?, 
+                sexo = ?, 
+                idade_aproximada = ?, 
+                status = ?, 
+                observacao = CONCAT(observacao, '\n[Atualização de Identificação]: ', ?)
+                WHERE id_morto = ?";
         
-        $mensagem = '<div class="alerta sucesso">Identificação atualizada com sucesso!</div>';
+        $stmt = mysqli_prepare($conexao, $sql);
+        mysqli_stmt_bind_param($stmt, 'sssissi', 
+            $nome, $identificacao, $sexo, $idade_aproximada, $status, $observacao, $id_morto);
         
-        // Atualizar dados na variável para refletir na página
-        $corpo['nome'] = $nome;
-        $corpo['identificacao'] = $identificacao;
-        $corpo['sexo'] = $sexo;
-        $corpo['idade_aproximada'] = $idade_aproximada;
-        $corpo['status'] = $status;
-    } else {
-        $mensagem = '<div class="alerta erro">Erro ao atualizar identificação: ' . mysqli_error($conexao) . '</div>';
+        if (mysqli_stmt_execute($stmt)) {
+            // Registrar no histórico
+            $descricao = "Identificação atualizada por $responsavel. Nome: $nome, Documento: $identificacao";
+            $usuario = $_SESSION['nome_usuario'];
+            
+            $sql_historico = "INSERT INTO tb_historico (id_morto, descricao, usuario) VALUES (?, ?, ?)";
+            $stmt_hist = mysqli_prepare($conexao, $sql_historico);
+            mysqli_stmt_bind_param($stmt_hist, 'iss', $id_morto, $descricao, $usuario);
+            mysqli_stmt_execute($stmt_hist);
+            
+            $mensagem = '<div class="alerta sucesso">Identificação atualizada com sucesso!</div>';
+            
+            // Atualizar dados na variável para refletir na página
+            $corpo['nome'] = $nome;
+            $corpo['identificacao'] = $identificacao;
+            $corpo['sexo'] = $sexo;
+            $corpo['idade_aproximada'] = $idade_aproximada;
+            $corpo['status'] = $status;
+        } else {
+            $mensagem = '<div class="alerta erro">Erro ao atualizar identificação: ' . mysqli_error($conexao) . '</div>';
+        }
     }
 }
 ?>
@@ -187,6 +207,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       margin-top: 5px;
     }
 
+    .user-info {
+      padding: 10px;
+      margin-top: 20px;
+      border-top: 1px solid #eee;
+      color: var(--accent-color);
+      font-size: 0.9rem;
+    }
+    
+    .user-info span {
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
     @media (max-width: 768px) {
       .form-row {
         flex-direction: column;
@@ -204,8 +237,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <li> <a href="saida.php">Saída de corpos</a></li>
         <li> <a href="lista_corpos.php">Lista de corpos</a></li>
         <li> <a href="historico.php">Histórico de saídas</a></li>
+        <?php if ($_SESSION['nivel_usuario'] == 'admin'): ?>
+        <li> <a href="usuarios.php">Gerenciar Usuários</a></li>
+        <?php endif; ?>
+        <li> <a href="logout.php">Sair do Sistema</a></li>
       </ul>
     </nav>
+    <div class="user-info">
+      Usuário: <span><?php echo htmlspecialchars($_SESSION['nome_usuario']); ?></span>
+      <br>
+      Nível: <span><?php echo $_SESSION['nivel_usuario'] == 'admin' ? 'Administrador' : 'Funcionário'; ?></span>
+    </div>
   </header>
   <main class="main">
     <section>
@@ -274,7 +316,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             
             <div class="form-group">
               <label for="responsavel">Responsável pela Identificação:</label>
-              <input type="text" id="responsavel" name="responsavel" required>
+              <input type="text" id="responsavel" name="responsavel" value="<?php echo htmlspecialchars($_SESSION['nome_usuario']); ?>" required>
             </div>
             
             <div class="form-group">

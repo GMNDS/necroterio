@@ -1,4 +1,5 @@
 <?php
+require_once 'verificar_sessao.php';
 require_once 'conexao.php';
 
 $mensagem = '';
@@ -19,31 +20,50 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $causa_presumida = isset($_POST['causa_presumida']) ? mysqli_real_escape_string($conexao, $_POST['causa_presumida']) : null;
     $responsavel = mysqli_real_escape_string($conexao, $_POST['responsavel_recepcao']);
 
-    // Inserir na tabela tb_recepcao (tabela unificada conforme novo esquema)
-    $sql = "INSERT INTO tb_recepcao (nome, origem, data_entrada, status, identificacao, id_camara, 
-            observacao, sexo, idade_aproximada, causa_presumida, responsavel_recepcao) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    
-    $stmt = mysqli_prepare($conexao, $sql);
-    mysqli_stmt_bind_param($stmt, 'sssssississ', 
-    $nome, $origem, $data_entrada, $status, $identificacao, 
-    $id_camara, $observacao, $sexo, $idade_aproximada, $causa_presumida, $responsavel);
-    
-    if (mysqli_stmt_execute($stmt)) {
-        $id_morto = mysqli_insert_id($conexao);
+    // Verificar se o CPF já existe no banco de dados (se foi fornecido)
+    $cpf_duplicado = false;
+    if (!empty($identificacao)) {
+        $sql_verificar_cpf = "SELECT COUNT(*) as total FROM tb_recepcao WHERE identificacao = ?";
+        $stmt_verificar = mysqli_prepare($conexao, $sql_verificar_cpf);
+        mysqli_stmt_bind_param($stmt_verificar, 's', $identificacao);
+        mysqli_stmt_execute($stmt_verificar);
+        $resultado_verificacao = mysqli_stmt_get_result($stmt_verificar);
+        $dados_verificacao = mysqli_fetch_assoc($resultado_verificacao);
         
-        // Registrar no histórico
-        $descricao = "Entrada registrada";
-        $usuario = "Sistema"; 
+        if ($dados_verificacao['total'] > 0) {
+            $cpf_duplicado = true;
+            $mensagem = '<div class="alerta erro">Este CPF já está cadastrado no sistema. Não é possível cadastrar o mesmo CPF duas vezes.</div>';
+        }
+    }
+
+    // Só prossegue com a inserção se não for um CPF duplicado
+    if (!$cpf_duplicado) {
+        // Inserir na tabela tb_recepcao (tabela unificada conforme novo esquema)
+        $sql = "INSERT INTO tb_recepcao (nome, origem, data_entrada, status, identificacao, id_camara, 
+                observacao, sexo, idade_aproximada, causa_presumida, responsavel_recepcao) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
-        $sql_historico = "INSERT INTO tb_historico (id_morto, descricao, usuario) VALUES (?, ?, ?)";
-        $stmt_hist = mysqli_prepare($conexao, $sql_historico);
-        mysqli_stmt_bind_param($stmt_hist, 'iss', $id_morto, $descricao, $usuario);
-        mysqli_stmt_execute($stmt_hist);
+        $stmt = mysqli_prepare($conexao, $sql);
+        mysqli_stmt_bind_param($stmt, 'sssssississ', 
+        $nome, $origem, $data_entrada, $status, $identificacao, 
+        $id_camara, $observacao, $sexo, $idade_aproximada, $causa_presumida, $responsavel);
         
-        $mensagem = '<div class="alerta sucesso">Corpo cadastrado com sucesso!</div>';
-    } else {
-        $mensagem = '<div class="alerta erro">Erro ao cadastrar: ' . mysqli_error($conexao) . '</div>';
+        if (mysqli_stmt_execute($stmt)) {
+            $id_morto = mysqli_insert_id($conexao);
+            
+            // Registrar no histórico
+            $descricao = "Entrada registrada";
+            $usuario = $_SESSION['nome_usuario']; 
+            
+            $sql_historico = "INSERT INTO tb_historico (id_morto, descricao, usuario) VALUES (?, ?, ?)";
+            $stmt_hist = mysqli_prepare($conexao, $sql_historico);
+            mysqli_stmt_bind_param($stmt_hist, 'iss', $id_morto, $descricao, $usuario);
+            mysqli_stmt_execute($stmt_hist);
+            
+            $mensagem = '<div class="alerta sucesso">Corpo cadastrado com sucesso!</div>';
+        } else {
+            $mensagem = '<div class="alerta erro">Erro ao cadastrar: ' . mysqli_error($conexao) . '</div>';
+        }
     }
 }
 ?>
@@ -130,6 +150,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         flex-direction: column;
       }
     }
+    
+    .user-info {
+      padding: 10px;
+      margin-top: 20px;
+      border-top: 1px solid #eee;
+      color: var(--accent-color);
+      font-size: 0.9rem;
+    }
+    
+    .user-info span {
+      font-weight: 600;
+      color: var(--primary-color);
+    }
   </style>
 </head>
 <body>
@@ -142,8 +175,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <li> <a href="saida.php">Saída de corpos</a></li>
         <li> <a href="lista_corpos.php">Lista de corpos</a></li>
         <li> <a href="historico.php">Histórico de saídas</a></li>
+        <?php if ($_SESSION['nivel_usuario'] == 'admin'): ?>
+        <li> <a href="usuarios.php">Gerenciar Usuários</a></li>
+        <?php endif; ?>
+        <li> <a href="logout.php">Sair do Sistema</a></li>
       </ul>
     </nav>
+    <div class="user-info">
+      Usuário: <span><?php echo htmlspecialchars($_SESSION['nome_usuario']); ?></span>
+      <br>
+      Nível: <span><?php echo $_SESSION['nivel_usuario'] == 'admin' ? 'Administrador' : 'Funcionário'; ?></span>
+    </div>
   </header>
   <main class="main">
     <section>
@@ -184,8 +226,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           
           <div class="form-row">
             <div class="form-group">
-              <label for="identificacao">Identificação (RG/CPF/Outro):</label>
-              <input type="text" id="identificacao" name="identificacao">
+              <label for="identificacao">Identificação (CPF):</label>
+              <input type="text" id="identificacao" name="identificacao" pattern="\d{3}\.\d{3}\.\d{3}-\d{2}" placeholder="Formato: 123.456.789-00">
             </div>
             
             <div class="form-group">
@@ -223,7 +265,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           
           <div class="form-group">
             <label for="responsavel_recepcao">Responsável pela Recepção:</label>
-            <input type="text" id="responsavel_recepcao" name="responsavel_recepcao" required>
+            <input type="text" id="responsavel_recepcao" name="responsavel_recepcao" value="<?php echo htmlspecialchars($_SESSION['nome_usuario']); ?>" required>
           </div>
           
           <div class="form-group">
